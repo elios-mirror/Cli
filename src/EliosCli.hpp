@@ -19,11 +19,10 @@ class EliosCli {
 public:
   explicit EliosCli(std::string pwd) : _pwd{std::move(pwd)} {
     std::array<char, 256> absolutePath{0};
-    
+
     realpath(_pwd.data(), absolutePath.data());
     _pwd = absolutePath.data();
     _pwd.append("/");
-    std::cout << _pwd << '\n';
     _config.loadConfigFile(_pwd + "elios.yml");
   }
 
@@ -37,19 +36,27 @@ public:
 
     // Check existing containers
     std::string cmd{"docker ps -a -f name="};
+    cmd.append("dev-");
     cmd.append(appName);
     cmd.append(" | grep -w ");
+    cmd.append("dev-");
     cmd.append(appName);
 
     std::string container{_exec(cmd)};
 
+    // if (container.empty()) {
+    //   return;
+    // }
+
     if (!container.empty()) {
       std::cout << "Stop and delete container" << '\n';
       cmd = "docker stop ";
+      cmd.append("dev-");
       cmd.append(appName);
       _exec(cmd);
 
       cmd = "docker rm ";
+      cmd.append("dev-");
       cmd.append(appName);
       _exec(cmd);
     }
@@ -60,7 +67,10 @@ public:
 
     std::string oldImagedId{_exec(imageIdCmd)};
 
-    oldImagedId.pop_back();
+    if (!oldImagedId.empty()) {
+      oldImagedId.pop_back();
+    }
+
     std::cout << "Old image ID: " << oldImagedId << '\n';
 
     // Build new app image
@@ -68,14 +78,17 @@ public:
     cmd.append(appName);
     cmd.append(":latest -f ");
     cmd.append(_pwd);
-    cmd.append("Dockerfile_dev ");
+    cmd.append("/Dockerfile_dev ");
     cmd.append(_pwd);
 
     _exec(cmd, true);
 
     // Removing old image
     std::string newImageId{_exec(imageIdCmd)};
-    newImageId.pop_back();
+    if (!newImageId.empty()) {
+      newImageId.pop_back();
+    }
+    std::cout << "-> " << oldImagedId << " : " << newImageId << '\n';
     if (!oldImagedId.empty() && oldImagedId != newImageId) {
       std::cout << "Removing old " << appName.data() << " image: " << oldImagedId << '\n';
       cmd = "docker rmi ";
@@ -87,7 +100,14 @@ public:
     // Run new container
     cmd = "docker run -it --mount type=bind,source=";
     cmd.append(_pwd);
-    cmd.append("src,target=/opt/app/src/ --name calendar dev/calendar:latest");
+    cmd.append("src,target=/opt/app/src/ --mount "
+               "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name ");
+    cmd.append("dev-");
+    cmd.append(appName);
+    cmd.append(" dev/");
+    cmd.append(appName);
+    cmd.append(":latest");
+  
     _exec(cmd, true);
   }
 
