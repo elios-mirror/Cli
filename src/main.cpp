@@ -11,15 +11,17 @@ int main(int ac, char *av[]) {
   (void)ac;
   (void)av;
 
-  if (ac < 3) {
+  if (ac < 2) {
     // TODO: print help
     std::cout << "Help" << '\n';
     return 1;
   }
 
-  EliosCli elCli;
+  EliosCli elCli{av[1]};
 
-  elCli.runDev(av[1]);
+  elCli.runDev();
+
+  std::cout << "Exiting cli" << '\n';
 
   return 0;
 }

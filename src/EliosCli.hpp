@@ -17,28 +17,101 @@
 
 class EliosCli {
 public:
-  EliosCli() : _config{"/home/gastal_r/Projects/Elios/elios-cli/calendar/elios.yml"} {}
+  explicit EliosCli(std::string pwd) : _pwd{std::move(pwd)} {
+    std::array<char, 256> absolutePath{0};
+    
+    realpath(_pwd.data(), absolutePath.data());
+    _pwd = absolutePath.data();
+    _pwd.append("/");
+    std::cout << _pwd << '\n';
+    _config.loadConfigFile(_pwd + "elios.yml");
+  }
 
-  void runDev(std::string_view path) noexcept {}
+  void runDev() noexcept {
+    auto appName{_config.get("name")};
+
+    if (appName.empty()) {
+      std::cerr << "Application name is not set, check your elios.yml" << '\n';
+      return;
+    }
+
+    // Check existing containers
+    std::string cmd{"docker ps -a -f name="};
+    cmd.append(appName);
+    cmd.append(" | grep -w ");
+    cmd.append(appName);
+
+    std::string container{_exec(cmd)};
+
+    if (!container.empty()) {
+      std::cout << "Stop and delete container" << '\n';
+      cmd = "docker stop ";
+      cmd.append(appName);
+      _exec(cmd);
+
+      cmd = "docker rm ";
+      cmd.append(appName);
+      _exec(cmd);
+    }
+
+    // Check and save old image ID
+    std::string imageIdCmd{"docker images -q dev/"};
+    imageIdCmd.append(appName);
+
+    std::string oldImagedId{_exec(imageIdCmd)};
+
+    oldImagedId.pop_back();
+    std::cout << "Old image ID: " << oldImagedId << '\n';
+
+    // Build new app image
+    cmd = "docker build --tag dev/";
+    cmd.append(appName);
+    cmd.append(":latest -f ");
+    cmd.append(_pwd);
+    cmd.append("Dockerfile_dev ");
+    cmd.append(_pwd);
+
+    _exec(cmd, true);
+
+    // Removing old image
+    std::string newImageId{_exec(imageIdCmd)};
+    newImageId.pop_back();
+    if (!oldImagedId.empty() && oldImagedId != newImageId) {
+      std::cout << "Removing old " << appName.data() << " image: " << oldImagedId << '\n';
+      cmd = "docker rmi ";
+      cmd.append(oldImagedId);
+
+      _exec(cmd);
+    }
+
+    // Run new container
+    cmd = "docker run -it --mount type=bind,source=";
+    cmd.append(_pwd);
+    cmd.append("src,target=/opt/app/src/ --name calendar dev/calendar:latest");
+    _exec(cmd, true);
+  }
 
   void buildProd(std::string_view path) noexcept { std::cout << path << '\n'; }
 
 private:
-  std::string _exec(const char *cmd) noexcept {
+  std::string _exec(std::string_view cmd, bool standardOutput = false) noexcept {
     std::array<char, 128> buffer{};
     std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.data(), "r"), pclose);
 
     if (!pipe) {
-      // throw std::runtime_error("popen() failed!");
       std::cerr << "Popen failed'\n";
       return "";
     }
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
       result += buffer.data();
+      if (standardOutput) {
+        std::cout << buffer.data();
+      }
     }
     return result;
   }
 
   Config _config;
+  std::string _pwd;
 };
