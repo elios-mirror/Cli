@@ -5,21 +5,27 @@
 
 #include "EliosCli.hpp"
 
+#include <cstring>
 #include <iostream>
 
 int main(int ac, char *av[]) {
-  (void)ac;
-  (void)av;
+  std::string _pwd{"."};
 
   if (ac < 2) {
-    // TODO: print help
-    std::cout << "Help" << '\n';
+    std::cout << "TODO: Help" << '\n';
     return 1;
   }
+  if (ac == 3) {
+    _pwd = av[2];
+  }
+  
+  EliosCli elCli{_pwd};
 
-  EliosCli elCli{av[1]};
-
-  elCli.runDev();
+  if (std::strcmp(av[1], "run") == 0) {
+    elCli.runDev();
+  } else {
+    std::cout << "Bad command" << '\n';
+  }
 
   std::cout << "Exiting cli" << '\n';
 
