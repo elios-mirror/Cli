@@ -1,0 +1,5 @@
+{
+  "mesonbuild.configureOnOpen": true,
+  "editor.codeLens": false,
+  "psi-header.license-text": ["Licensed under the GPLv2 License. See License.txt in the project root for license information."]
+}

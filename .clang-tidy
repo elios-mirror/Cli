@@ -1,0 +1,1 @@
+Checks: '*, -abseil*, -android*, -boost*, -fuchsia*, -objc*, -clang-diagnostic-c++98-compat*, -clang-diagnostic-switch-enum, -llvm-header-guard, -clang-diagnostic-c++98-c++11-c++14-compat, -clang-diagnostic-pragma-once-outside-header, -cppcoreguidelines-avoid-magic-numbers, -clang-diagnostic-padded'
