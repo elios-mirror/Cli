@@ -17,96 +17,76 @@
 
 class EliosCli {
 public:
-  explicit EliosCli(std::string pwd) : _pwd{std::move(pwd)} {
+  EliosCli() = default;
+
+  void loadConfig(std::string_view path) {
     std::array<char, 256> absolutePath{0};
 
-    realpath(_pwd.data(), absolutePath.data());
+    realpath(path.data(), absolutePath.data());
     _pwd = absolutePath.data();
     _pwd.append("/");
     _config.loadConfigFile(_pwd + "elios.yml");
+
+    _appName = _config.get("name");
   }
 
-  void runDev() noexcept {
-    auto appName{_config.get("name")};
+  void setName(std::string appName) noexcept { _appName = std::move(appName); }
 
-    if (appName.empty()) {
-      std::cerr << "Application name is not set, check your elios.yml" << '\n';
+  void runDev() noexcept {
+    if (_appName.empty()) {
+      std::cerr << "Error: Application name is not set, check your elios.yml" << '\n';
+      return;
+    }
+    if (_pwd.empty()) {
+      std::cerr << "Error: path unknow" << '\n';
       return;
     }
 
     // Check existing containers
-    std::string cmd{"docker ps -a -f name=dev-"};
-    cmd.append(appName);
-    cmd.append(" | grep -w dev-");
-    cmd.append(appName);
+    bool existing{_isContainerExist()};
 
-    std::string container{_exec(cmd)};
-
-    // if (container.empty()) {
-    //   return;
-    // }
-
-    if (!container.empty()) {
-      std::cout << "Stop and delete container" << '\n';
-      cmd = "docker stop dev-";
-      cmd.append(appName);
-      _exec(cmd);
-
-      cmd = "docker rm dev-";
-      cmd.append(appName);
-      _exec(cmd);
+    if (existing) {
+      _stopAndDeleteContainer();
     }
 
     // Check and save old image ID
-    std::string imageIdCmd{"docker images -q dev/"};
-    imageIdCmd.append(appName);
-
-    std::string oldImagedId{_exec(imageIdCmd)};
+    std::string oldImagedId{_imageId()};
 
     if (!oldImagedId.empty()) {
       oldImagedId.pop_back();
     }
-
     std::cout << "Old image ID: " << oldImagedId << '\n';
 
     // Build new app image
-    cmd = "docker build --tag dev/";
-    cmd.append(appName);
-    cmd.append(":latest -f ");
-    cmd.append(_pwd);
-    cmd.append("/Dockerfile_dev ");
-    cmd.append(_pwd);
-
-    _exec(cmd, true);
+    _buildDevImage();
 
     // Removing old image
-    std::string newImageId{_exec(imageIdCmd)};
+    std::string newImageId{_imageId()};
     if (!newImageId.empty()) {
       newImageId.pop_back();
     }
-    std::cout << "-> " << oldImagedId << " : " << newImageId << '\n';
     if (!oldImagedId.empty() && oldImagedId != newImageId) {
-      std::cout << "Removing old " << appName.data() << " image: " << oldImagedId << '\n';
-      cmd = "docker rmi ";
-      cmd.append(oldImagedId);
-
-      _exec(cmd);
+      std::cout << "Removing old " << _appName.data() << " image: " << oldImagedId << '\n';
+      _deleteImage(oldImagedId);
     }
 
     // Run new container
-    cmd = "docker run -it --mount type=bind,source=";
-    cmd.append(_pwd);
-    cmd.append("src,target=/opt/app/src/ --mount "
-               "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name dev-");
-    cmd.append(appName);
-    cmd.append(" dev/");
-    cmd.append(appName);
-    cmd.append(":latest");
-
-    _exec(cmd, true);
+    _runContainer();
   }
 
-  void buildProd(std::string_view path) noexcept { std::cout << path << '\n'; }
+  void cleanApp() {
+    if (_appName.empty()) {
+      std::cerr << "Error: Application name is not set, check your elios.yml" << '\n';
+      return;
+    }
+
+    if (_isContainerExist()) {
+      _stopAndDeleteContainer();
+    }
+    _deleteImage();
+  }
+
+  // void buildProd() noexcept { std::cout << path << '\n'; }
 
 private:
   std::string _exec(std::string_view cmd, bool standardOutput = false) noexcept {
@@ -127,6 +107,41 @@ private:
     return result;
   }
 
+  void _stopAndDeleteContainer() noexcept {
+    std::cout << "Stop and deleting container" << '\n';
+    _exec("docker stop dev-" + _appName);
+
+    _exec("docker rm dev-" + _appName);
+  }
+
+  bool _isContainerExist() noexcept {
+    std::string container{
+        _exec("docker ps -a -f name=dev-" + _appName + " | grep -w dev-" + _appName)};
+    return !container.empty();
+  }
+
+  void _buildDevImage() noexcept {
+    _exec("docker build --tag dev/" + _appName + ":latest -f " + _pwd + "/Dockerfile_dev " + _pwd,
+          true);
+  }
+
+  std::string _imageId() noexcept { return _exec("docker images -q dev/" + _appName); }
+
+  void _deleteImage(const std::string &appName) noexcept { 
+    std::cout << "Deleting image" << '\n';
+    _exec("docker rmi dev/" + appName); }
+
+  void _deleteImage() noexcept { _deleteImage(_appName); }
+
+  void _runContainer() noexcept {
+    _exec("docker run -it --mount type=bind,source=" + _pwd +
+              "src,target=/opt/app/src/ --mount "
+              "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name dev-" +
+              _appName + " dev/" + _appName + ":latest",
+          true);
+  }
+
   Config _config;
   std::string _pwd;
+  std::string _appName;
 };

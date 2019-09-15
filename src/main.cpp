@@ -15,14 +15,23 @@ int main(int ac, char *av[]) {
     std::cout << "TODO: Help" << '\n';
     return 1;
   }
-  if (ac == 3) {
-    _pwd = av[2];
-  }
-  
-  EliosCli elCli{_pwd};
+
+  EliosCli elCli;
 
   if (std::strcmp(av[1], "run") == 0) {
+    if (ac == 3) {
+      _pwd = av[2];
+    }
+    elCli.loadConfig(_pwd);
     elCli.runDev();
+  } else if (std::strcmp(av[1], "clean") == 0) {
+    if (ac < 3) {
+      elCli.loadConfig(".");
+      elCli.cleanApp();
+    } else {
+      elCli.setName(av[2]);
+      elCli.cleanApp();
+    }
   } else {
     std::cout << "Bad command" << '\n';
   }
