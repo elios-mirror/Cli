@@ -15,7 +15,7 @@ sub_proj = cmake.subproject('yaml-cpp', cmake_options: ['-DYAML_BUILD_SHARED_LIB
 
 yaml_dep = sub_proj.dependency('yaml-cpp')
 
-executable('elios-cli',
+executable('elios',
         sources : src,
         include_directories: inc_dir,
         install: true,

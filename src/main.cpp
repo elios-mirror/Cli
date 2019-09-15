@@ -24,6 +24,7 @@ int main(int ac, char *av[]) {
     }
     elCli.loadConfig(_pwd);
     elCli.runDev();
+    std::cout << "Exiting cli" << '\n';
   } else if (std::strcmp(av[1], "clean") == 0) {
     if (ac < 3) {
       elCli.loadConfig(".");
@@ -32,11 +33,12 @@ int main(int ac, char *av[]) {
       elCli.setName(av[2]);
       elCli.cleanApp();
     }
+  } else if (std::strcmp(av[1], "images") == 0) {
+    elCli.images();
   } else {
     std::cout << "Bad command" << '\n';
+    return 1;
   }
-
-  std::cout << "Exiting cli" << '\n';
 
   return 0;
 }

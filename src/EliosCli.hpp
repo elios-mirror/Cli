@@ -55,7 +55,6 @@ public:
     if (!oldImagedId.empty()) {
       oldImagedId.pop_back();
     }
-    std::cout << "Old image ID: " << oldImagedId << '\n';
 
     // Build new app image
     _buildDevImage();
@@ -86,6 +85,9 @@ public:
     _deleteImage();
   }
 
+  void images() {
+    _exec(" docker images | grep \"dev/\" | cut -d \" \" -f1", true);
+  }
   // void buildProd() noexcept { std::cout << path << '\n'; }
 
 private:
@@ -129,7 +131,7 @@ private:
 
   void _deleteImage(const std::string &appName) noexcept { 
     std::cout << "Deleting image" << '\n';
-    _exec("docker rmi dev/" + appName); }
+    _exec("docker rmi dev/" + appName + ":latest"); }
 
   void _deleteImage() noexcept { _deleteImage(_appName); }
 
