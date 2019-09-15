@@ -35,11 +35,9 @@ public:
     }
 
     // Check existing containers
-    std::string cmd{"docker ps -a -f name="};
-    cmd.append("dev-");
+    std::string cmd{"docker ps -a -f name=dev-"};
     cmd.append(appName);
-    cmd.append(" | grep -w ");
-    cmd.append("dev-");
+    cmd.append(" | grep -w dev-");
     cmd.append(appName);
 
     std::string container{_exec(cmd)};
@@ -50,13 +48,11 @@ public:
 
     if (!container.empty()) {
       std::cout << "Stop and delete container" << '\n';
-      cmd = "docker stop ";
-      cmd.append("dev-");
+      cmd = "docker stop dev-";
       cmd.append(appName);
       _exec(cmd);
 
-      cmd = "docker rm ";
-      cmd.append("dev-");
+      cmd = "docker rm dev-";
       cmd.append(appName);
       _exec(cmd);
     }
@@ -101,13 +97,12 @@ public:
     cmd = "docker run -it --mount type=bind,source=";
     cmd.append(_pwd);
     cmd.append("src,target=/opt/app/src/ --mount "
-               "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name ");
-    cmd.append("dev-");
+               "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name dev-");
     cmd.append(appName);
     cmd.append(" dev/");
     cmd.append(appName);
     cmd.append(":latest");
-  
+
     _exec(cmd, true);
   }
 
