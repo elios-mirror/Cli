@@ -8,11 +8,19 @@
 #include <cstring>
 #include <iostream>
 
+void printHelp(void) {
+  std::cout << "Usage: elios [option] [argument]\n\nOptions:\n";
+  std::cout << "run:        run an application in containerised development mode.\n arg:        path of the app\n";
+  std::cout << "clean:      all container linked to the application. \n arg:        path of the app\n";
+  std::cout << "image:      list all elios applications images. \n";
+  std::cout << "publish:    publish the application to the elios store. \n";
+}
+
 int main(int ac, char *av[]) {
   std::string _pwd{"."};
 
   if (ac < 2) {
-    std::cout << "TODO: Help" << '\n';
+    printHelp();
     return 1;
   }
 
@@ -24,7 +32,6 @@ int main(int ac, char *av[]) {
     }
     elCli.loadConfig(_pwd);
     elCli.runDev();
-    std::cout << "Exiting cli" << '\n';
   } else if (std::strcmp(av[1], "clean") == 0) {
     if (ac < 3) {
       elCli.loadConfig(".");
@@ -35,10 +42,18 @@ int main(int ac, char *av[]) {
     }
   } else if (std::strcmp(av[1], "images") == 0) {
     elCli.images();
+  } else if (std::strcmp(av[1], "publish") == 0) {
+    if (ac == 3) {
+      _pwd = av[2];
+    }
+    if (elCli.loadJson(_pwd)) {
+      elCli.publish();
+    }
   } else {
-    std::cout << "Bad command" << '\n';
+    printHelp();
     return 1;
   }
 
+  std::cout << "Exiting cli" << '\n';
   return 0;
 }

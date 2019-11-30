@@ -1,0 +1,4 @@
+[wrap-git]
+directory = websocketpp
+url = https://github.com/zaphoyd/websocketpp
+revision = head
