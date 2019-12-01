@@ -15,9 +15,14 @@ sub_proj_yaml = cmake.subproject('yaml-cpp', cmake_options: ['-DYAML_BUILD_SHARE
 
 yaml_dep = sub_proj_yaml.dependency('yaml-cpp')
 
+cxx = meson.get_compiler('cpp')
+curl_dep = [
+    cxx.find_library('curl')
+]
+
 executable('elios',
         sources : src,
         include_directories: inc_dir,
         install: true,
-        dependencies : [yaml_dep]
+        dependencies : [yaml_dep, curl_dep]
 )

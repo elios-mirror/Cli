@@ -46,7 +46,7 @@ int main(int ac, char *av[]) {
     if (ac == 3) {
       _pwd = av[2];
     }
-    if (elCli.loadJson(_pwd)) {
+    if (elCli.loadConfig(_pwd) && elCli.loadJson(_pwd)) {
       elCli.publish();
     }
   } else {

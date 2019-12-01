@@ -19,20 +19,21 @@ public:
     loadConfigFile(configPath);
   }
 
-  void loadConfigFile(const std::string &configPath) {
+  bool loadConfigFile(const std::string &configPath) {
     YAML::Node config;
 
     try {
       config = YAML::LoadFile(configPath);
     } catch (YAML::BadFile &) {
       std::cerr << "elios.yml not found or bad file";
-      return;
+      return false;
     }
 
-    const auto appName = config["name"];
-    if (appName.IsDefined()) {
-      _config.emplace("name", appName.as<std::string>());
+    for (const auto &it : config) {
+      _config[it.first.as<std::string>()] = it.second.as<std::string>();
     }
+
+    return true;
   }
 
   std::string_view get(const std::string &id) const noexcept {

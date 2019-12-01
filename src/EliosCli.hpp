@@ -9,40 +9,55 @@
 
 #include <array>
 #include <cstdio>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <fstream>
+#include <thread>
+
+#include <curl/curl.h>
 
 class EliosCli {
 public:
   EliosCli() = default;
 
-  void loadConfig(std::string_view path) {
+  bool loadConfig(std::string_view path) {
     std::array<char, 256> absolutePath{0};
 
     realpath(path.data(), absolutePath.data());
     _pwd = absolutePath.data();
     _pwd.append("/");
-    _config.loadConfigFile(_pwd + "elios.yml");
+
+    if (!_config.loadConfigFile(_pwd + "elios.yml"))
+      return false;
 
     _appName = _config.get("name");
+    if (_appName.empty()) {
+      std::cout << "Application name not found in elios.yml" << '\n';
+      return false;
+    }
+    _appVersion = _config.get("version");
+    if (_appVersion.empty()) {
+      std::cout << "Application version not found in elios.yml" << '\n';
+      return false;
+    }
+    return true;
   }
-  
+
   bool loadJson(std::string_view path) {
     std::array<char, 256> absolutePath{0};
 
     realpath(path.data(), absolutePath.data());
     _pwd = absolutePath.data();
-    _pwd.append("/config.json");
+    _pwd.append("/variables.json");
 
     std::ifstream ifs(_pwd.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
 
     std::ifstream::pos_type fileSize = ifs.tellg();
     if (!ifs.is_open()) {
-      std::cout << "Config not found" << '\n';
+      std::cout << "variables.json not found" << '\n';
       return false;
     }
     ifs.seekg(0, std::ios::beg);
@@ -110,12 +125,58 @@ public:
     _deleteImage();
   }
 
-  void images() { _exec(" docker images | grep \"dev/\" | cut -d \" \" -f1", true); }
+  void images() { _exec("docker images | grep \"dev/\" | cut -d \" \" -f1", true); }
 
-  void publish() { 
-    _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json));
+  static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string *)userp)->append((char *)contents, size * nmemb);
+    return size * nmemb;
   }
-  // void buildProd() noexcept { std::cout << path << '\n'; }
+
+  void publish() {
+    _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
+          "?name=" + _urlEncode(_appName) + "?version=" + _urlEncode(_appVersion));
+
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
+
+    // curl_global_init(CURL_GLOBAL_DEFAULT);
+
+    curl = curl_easy_init();
+    if (curl) {
+      std::string url{"https://dev.elios-mirror.com/api/checker/modules/" + _appName + "/" +
+                      _appVersion + "/"};
+      curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+
+      constexpr size_t minutes{10 * 60};
+      for (size_t time = 0; time < minutes;) {
+        res = curl_easy_perform(curl);
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (res != CURLE_OK) {
+          std::cout << curl_easy_strerror(res) << '\n';
+        } else {
+          std::cout << readBuffer << std::endl;
+          if (readBuffer == "true") {
+            _publishDocker();
+            break;
+          }
+          readBuffer.clear();
+        }
+        time += 5;
+      }
+      curl_easy_cleanup(curl);
+    }
+    // curl_global_cleanup();
+  }
+
+private:
+  Config _config;
+  std::string _pwd;
+  std::string _appName;
+  std::string _appVersion;
+  std::string _json;
 
 private:
   std::string _urlEncode(const std::string &value) {
@@ -125,12 +186,10 @@ private:
 
     for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
       std::string::value_type c = (*i);
-      // Keep alphanumeric and other accepted characters intact
       if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
         escaped << c;
         continue;
       }
-      // Any other characters are percent-encoded
       escaped << std::uppercase;
       escaped << '%' << std::setw(2) << int((unsigned char)c);
       escaped << std::nouppercase;
@@ -192,9 +251,8 @@ private:
           true);
   }
 
-private:
-  Config _config;
-  std::string _pwd;
-  std::string _appName;
-  std::string _json;
+  void _publishDocker() noexcept {
+    _exec("docker login -u eliosmirror -p Upy5zNkTnXhm8RDr", true);
+    _exec("docker push eliosmirror/" + _appName + ":latest", true);
+  }
 };
