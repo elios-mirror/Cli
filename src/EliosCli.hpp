@@ -253,6 +253,6 @@ private:
 
   void _publishDocker() noexcept {
     _exec("docker login -u eliosmirror -p Upy5zNkTnXhm8RDr", true);
-    _exec("docker push eliosmirror/" + _appName + ":latest", true);
+    _exec("docker push dev/" + _appName + ":latest", true);
   }
 };
