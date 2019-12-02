@@ -133,8 +133,16 @@ public:
   }
 
   void publish() {
-    _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
-          "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion) + " &");
+    std::string url{"https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
+            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion)};
+
+    #if defined(__APPLE__)
+      _exec("open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
+            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion));
+    #else
+      _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
+            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion) + " &");
+    #endif // __APPLE__
 
     CURL *curl;
     CURLcode res;
