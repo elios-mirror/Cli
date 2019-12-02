@@ -134,7 +134,7 @@ public:
 
   void publish() {
     _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
-          "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion));
+          "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion) + " &");
 
     CURL *curl;
     CURLcode res;
@@ -157,7 +157,6 @@ public:
         if (res != CURLE_OK) {
           std::cout << curl_easy_strerror(res) << '\n';
         } else {
-          std::cout << readBuffer << std::endl;
           if (readBuffer == "true") {
             _publishDocker();
             break;
