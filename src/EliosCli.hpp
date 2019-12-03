@@ -51,9 +51,8 @@ public:
 
     realpath(path.data(), absolutePath.data());
     _pwd = absolutePath.data();
-    _pwd.append("/variables.json");
 
-    std::ifstream ifs(_pwd.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+    std::ifstream ifs(_pwd + "/variables.json", std::ios::in | std::ios::binary | std::ios::ate);
 
     std::ifstream::pos_type fileSize = ifs.tellg();
     if (!ifs.is_open()) {
@@ -137,11 +136,9 @@ public:
             "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion)};
 
     #if defined(__APPLE__)
-      _exec("open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
-            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion));
+      _exec("open " + url + " &");
     #else
-      _exec("xdg-open  https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
-            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion) + " &");
+      _exec("xdg-open  " + url + " &");
     #endif // __APPLE__
 
     CURL *curl;
