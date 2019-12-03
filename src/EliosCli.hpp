@@ -166,6 +166,11 @@ public:
           std::cout << curl_easy_strerror(res) << '\n';
         } else {
           if (readBuffer == "true") {
+            bool existing{_isContainerExist()};
+            if (existing) {
+              _stopAndDeleteContainer();
+            }
+            _buildDevImage();
             _publishDocker();
             break;
           }
