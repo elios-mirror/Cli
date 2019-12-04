@@ -124,7 +124,7 @@ public:
     _deleteImage();
   }
 
-  void images() { _exec("docker images | grep \"dev/\" | cut -d \" \" -f1", true); }
+  void images() { _exec("docker images | grep \"eliosmirror/\" | cut -d \" \" -f1", true); }
 
   static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     ((std::string *)userp)->append((char *)contents, size * nmemb);
@@ -254,20 +254,20 @@ private:
   }
 
   void _buildImage() noexcept {
-    _exec("docker build --tag dev/" + _appName + ":latest -f " + _pwd + "/Dockerfile " + _pwd,
+    _exec("docker build --tag eliosmirror/" + _appName + ":dev -f " + _pwd + "/Dockerfile " + _pwd,
           true);
   }
 
   void _buildDevImage() noexcept {
-    _exec("docker build --tag dev/" + _appName + ":latest -f " + _pwd + "/Dockerfile_dev " + _pwd,
+    _exec("docker build --tag eliosmirror/" + _appName + ":dev -f " + _pwd + "/Dockerfile_dev " + _pwd,
           true);
   }
 
-  std::string _imageId() noexcept { return _exec("docker images -q dev/" + _appName); }
+  std::string _imageId() noexcept { return _exec("docker images -q eliosmirror/" + _appName); }
 
   void _deleteImage(const std::string &appName) noexcept {
     std::cout << "Deleting image" << '\n';
-    _exec("docker rmi dev/" + appName + ":latest");
+    _exec("docker rmi eliosmirror/" + appName + ":dev");
   }
 
   void _deleteImage() noexcept { _deleteImage(_appName); }
@@ -276,13 +276,13 @@ private:
     _exec("docker run -it --mount type=bind,source=" + _pwd +
               "src,target=/opt/app/src/ --mount "
               "type=bind,source=/tmp/elios_mirror,target=/tmp/elios_mirror --name dev-" +
-              _appName + " dev/" + _appName + ":latest",
+              _appName + " eliosmirror/" + _appName + ":dev",
           true);
   }
 
   void _publishDocker() noexcept {
     _exec("echo Upy5zNkTnXhm8RDr | docker login -u eliosmirror --password-stdin", true);
-    _exec("docker tag dev/" + _appName + ":latest eliosmirror/" + _appName + ":latest", true);
+    _exec("docker tag eliosmirror/" + _appName + ":dev eliosmirror/" + _appName + ":latest", true);
     _exec("docker push eliosmirror/" + _appName + ":latest", true);
   }
 };
