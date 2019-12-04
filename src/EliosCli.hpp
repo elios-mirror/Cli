@@ -96,7 +96,7 @@ public:
     }
 
     // Build new app image
-    _buildDevImage();
+    _buildImage();
 
     // Removing old image
     std::string newImageId{_imageId()};
@@ -133,13 +133,13 @@ public:
 
   void publish() {
     std::string url{"https://dev.elios-mirror.com/modules/import?json=" + _urlEncode(_json) +
-            "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion)};
+                    "\\&name=" + _urlEncode(_appName) + "\\&version=" + _urlEncode(_appVersion)};
 
-    #if defined(__APPLE__)
-      _exec("open " + url + " &");
-    #else
-      _exec("xdg-open  " + url + " &");
-    #endif // __APPLE__
+#if defined(__APPLE__)
+    _exec("open " + url + " &");
+#else
+    _exec("xdg-open  " + url + " &");
+#endif // __APPLE__
 
     CURL *curl;
     CURLcode res;
@@ -156,6 +156,7 @@ public:
       curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
       constexpr size_t minutes{10 * 60};
+      std::cout << "Waiting server confirmation..." << '\n';
       for (size_t time = 0; time < minutes;) {
         res = curl_easy_perform(curl);
         std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -167,7 +168,21 @@ public:
             if (existing) {
               _stopAndDeleteContainer();
             }
-            _buildDevImage();
+            std::string oldImagedId{_imageId()};
+            if (!oldImagedId.empty()) {
+              oldImagedId.pop_back();
+            }
+            _buildImage();
+
+            std::string newImageId{_imageId()};
+            if (!newImageId.empty()) {
+              newImageId.pop_back();
+            }
+            if (!oldImagedId.empty() && oldImagedId != newImageId) {
+              std::cout << "Removing old " << _appName.data() << " image: " << oldImagedId << '\n';
+              _deleteImage(oldImagedId);
+            }
+
             _publishDocker();
             break;
           }
@@ -238,6 +253,11 @@ private:
     return !container.empty();
   }
 
+  void _buildImage() noexcept {
+    _exec("docker build --tag dev/" + _appName + ":latest -f " + _pwd + "/Dockerfile " + _pwd,
+          true);
+  }
+
   void _buildDevImage() noexcept {
     _exec("docker build --tag dev/" + _appName + ":latest -f " + _pwd + "/Dockerfile_dev " + _pwd,
           true);
@@ -261,7 +281,8 @@ private:
   }
 
   void _publishDocker() noexcept {
-    _exec("docker login -u eliosmirror -p Upy5zNkTnXhm8RDr", true);
-    _exec("docker push dev/" + _appName + ":latest", true);
+    _exec("echo Upy5zNkTnXhm8RDr | docker login -u eliosmirror --password-stdin", true);
+    _exec("docker tag dev/" + _appName + ":latest eliosmirror/" + _appName + ":latest", true);
+    _exec("docker push eliosmirror/" + _appName + ":latest", true);
   }
 };

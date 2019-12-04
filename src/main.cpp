@@ -5,15 +5,30 @@
 
 #include "EliosCli.hpp"
 
+#include <csignal>
 #include <cstring>
 #include <iostream>
 
+static bool _signal_caught{false};
+
 void printHelp(void) {
   std::cout << "Usage: elios [option] [argument]\n\nOptions:\n";
-  std::cout << "run:        run an application in containerised development mode.\n arg:        path of the app\n";
-  std::cout << "clean:      all container linked to the application. \n arg:        path of the app\n";
+  std::cout << "run:        run an application in containerised development mode.\n arg:        "
+               "path of the app\n";
+  std::cout
+      << "clean:      all container linked to the application. \n arg:        path of the app\n";
   std::cout << "image:      list all elios applications images. \n";
   std::cout << "publish:    publish the application to the elios store. \n";
+}
+
+void handler(int s) {
+  (void)s;
+  if (_signal_caught) {
+    exit(1);
+  } else {
+    _signal_caught = true;
+  }
+  std::cout << "Are you sure you want to exit ?" << std::endl;
 }
 
 int main(int ac, char *av[]) {
@@ -23,7 +38,7 @@ int main(int ac, char *av[]) {
     printHelp();
     return 1;
   }
-
+  signal(SIGINT, handler);
   EliosCli elCli;
 
   if (std::strcmp(av[1], "run") == 0) {
